@@ -1,0 +1,19 @@
+{
+  "name": "routecli",
+  "version": "0.1.0",
+  "description": "Launches Claude Code, OpenAI Codex, or Gemini CLI and routes each turn to the cheapest model that can handle it",
+  "type": "module",
+  "bin": {
+    "routecli": "bin/routecli.js"
+  },
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@typesafe-ai/sdk": "^0.6.0"
+  }
+}
