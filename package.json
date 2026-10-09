@@ -1,10 +1,13 @@
 {
-  "name": "routecli",
+  "name": "@ratnesh03/routecli",
   "version": "0.1.0",
   "description": "Launches Claude Code, OpenAI Codex, or Gemini CLI and routes each turn to the cheapest model that can handle it",
   "type": "module",
   "bin": {
     "routecli": "bin/routecli.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "test": "node --test \"test/**/*.test.js\""
