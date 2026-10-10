@@ -5,7 +5,7 @@
 import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { startRoutingProxy } from "../src/proxyServer.js";
+import { startRoutingProxy, DEBUG_LOG_FILE } from "../src/proxyServer.js";
 import { loadConfigFile, hasRoutingKey, quoteForShell } from "../src/launcher.js";
 import { claudeProvider } from "../src/providers/claude.js";
 import { codexProvider } from "../src/providers/codex.js";
@@ -55,6 +55,10 @@ if (hasRoutingKey()) {
   });
   Object.assign(env, launchEnv);
   args = [...rest, ...extraArgs];
+  if (process.env.ROUTECLI_DEBUG && process.stdout.isTTY) {
+    // Debug output cannot go to the terminal here without corrupting the CLI's display.
+    process.stderr.write(`[routecli] routing decisions -> ${DEBUG_LOG_FILE}\n`);
+  }
 } else {
   process.stderr.write(
     "[routecli] no JEV_API_KEY found - starting without routing\n" +

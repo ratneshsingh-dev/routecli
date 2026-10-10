@@ -6,12 +6,27 @@
 
 import http from "node:http";
 import https from "node:https";
+import { appendFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import { askBrain } from "./brain.js";
 import { decideTier } from "./tiers.js";
 import { writeSessionStatus } from "./sessionStore.js";
 
+// The wrapped CLI owns the terminal, and writing to stderr underneath a full-screen TUI
+// corrupts its prompt. So an interactive session logs to a file instead, and only a piped
+// or non-interactive run (`-p`, CI) writes to stderr where it is actually readable.
+export const DEBUG_LOG_FILE = join(homedir(), ".routecli.log");
+
 const debugLog = (line) => {
-  if (process.env.ROUTECLI_DEBUG) process.stderr.write(`[routecli] ${line}\n`);
+  if (!process.env.ROUTECLI_DEBUG) return;
+  const text = `[routecli] ${line}\n`;
+  if (!process.stdout.isTTY) return void process.stderr.write(text);
+  try {
+    appendFileSync(DEBUG_LOG_FILE, `${new Date().toISOString()} ${text}`);
+  } catch {
+    // Unwritable home directory; a debug log is never worth failing a request over.
+  }
 };
 
 /**
@@ -77,13 +92,16 @@ export async function startRoutingProxy(provider, { brain = askBrain, sessionId 
                 availableTiers,
                 contextTokens,
               });
-              debugLog(
-                `${key} ${brainAnswer ? `p=${brainAnswer.confidence.toFixed(2)}` : "no-brain"} ` +
-                  `${currentTier} -> ${decision.tier} (${decision.reason})`,
-              );
             }
 
             const modelId = provider.modelIdForTier(decision.tier);
+
+            if (turn.promptText) {
+              debugLog(
+                `${key} ${brainAnswer ? `p=${brainAnswer.confidence.toFixed(2)}` : "no-brain"} ` +
+                  `${currentTier} -> ${decision.tier} (${decision.reason}) served by ${modelId}`,
+              );
+            }
             state.tier = decision.tier;
             state.modelId = modelId;
 
