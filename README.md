@@ -20,22 +20,49 @@ you -> claude/codex/gemini -> routecli proxy -> real API
 
 ## Setup
 
+Requires Node.js 20.12+ and the CLI you want to route (`claude`, `codex`, or `gemini`)
+already installed and logged in — routecli wraps them, it does not bundle them.
+
 ```bash
-npm install
+npm install -g @ratnesh04/routecli
+```
+
+Then add a routing key from [TypeSafe](https://typesafe.ai):
+
+```bash
+# macOS / Linux
 echo "JEV_API_KEY=..." > ~/.routecli.env
+
+# Windows (cmd)
+(echo JEV_API_KEY=...)> "%USERPROFILE%\.routecli.env"
 ```
 
-Get a routing key from [TypeSafe](https://typesafe.ai). Then run any supported CLI through
-the router:
+Now run any supported CLI through the router:
 
 ```bash
-node bin/routecli.js claude -p "fix the failing test"
-node bin/routecli.js codex exec "fix the failing test"
-node bin/routecli.js gemini -p "fix the failing test"
+routecli claude
+routecli claude -p "fix the failing test"
+routecli codex exec "fix the failing test"
+routecli gemini -p "fix the failing test"
 ```
 
-`npm link` installs `routecli` globally, after which the above becomes
-`routecli claude ...`, etc.
+Every argument is forwarded to the underlying CLI unchanged.
+
+On Windows, if `routecli` is not recognized after installing, npm's global folder is missing
+from your `PATH`. Run `npm config get prefix` and add that directory to `PATH`.
+
+## Seeing what it routed to
+
+Claude Code's own UI shows the model it asked for (the routing sentinel), never the one the
+proxy substituted, so routecli injects a status line:
+
+```
+⚡ claude-haiku-4-5-20251001 · p=0.99 · 8% context
+```
+
+An existing `statusLine` in your Claude settings is left untouched; set
+`ROUTECLI_NO_STATUSLINE=1` to disable the injected one. For one-shot runs, use
+`ROUTECLI_DEBUG=1` to print each decision to stderr instead.
 
 ## Providers
 
@@ -57,9 +84,10 @@ works normally with `GEMINI_API_KEY` set, which uses the public, documented API.
 | Variable | Effect |
 | --- | --- |
 | `JEV_API_KEY` / `TYPESAFE_API_KEY` | Enables routing; without it the CLI runs unmodified |
-| `MODEL_ROUTER_DEBUG` | Logs routing decisions to stderr |
-| `MODEL_ROUTER_ALLOW_DEEP` | Opts into the `deep` tier, which costs more on most accounts |
-| `MODEL_ROUTER_<PROVIDER>_<TIER>` | Overrides the model id for a tier, e.g. `MODEL_ROUTER_CLAUDE_STRONG=claude-opus-5` |
+| `ROUTECLI_DEBUG` | Logs routing decisions to stderr |
+| `ROUTECLI_ALLOW_DEEP` | Opts into the `deep` tier, which costs more on most accounts |
+| `ROUTECLI_NO_STATUSLINE` | Disables the injected Claude Code status line |
+| `ROUTECLI_<PROVIDER>_<TIER>` | Overrides the model id for a tier, e.g. `ROUTECLI_CLAUDE_STRONG=claude-opus-5` |
 
 Config is loaded from (in precedence order): real environment variables, `./.env`, then
 `~/.routecli.env`.

@@ -46,10 +46,14 @@ export async function startRoutingProxy(provider, { brain = askBrain, sessionId 
           const parsedBody = outgoingBody.length ? JSON.parse(outgoingBody.toString("utf8")) : {};
           const turn = provider.readTurn(parsedBody, outgoingUrl);
 
+          // A status line reads this file, and it only knows the CLI's own session id, so
+          // prefer the key the provider dug out of the request over our process-level one.
+          const statusKey = turn?.statusKey || sessionId;
+
           if (turn && !turn.isSentinel) {
             // The CLI (or the user through /model) picked a real model itself; an explicit
             // choice always wins and nothing here should be rewritten.
-            if (turn.promptText) writeSessionStatus(sessionId, { manual: true, at: Date.now() });
+            if (turn.promptText) writeSessionStatus(statusKey, { manual: true, at: Date.now() });
           } else if (turn) {
             const key = turn.conversationId;
             const state = conversationState(key);
@@ -77,18 +81,23 @@ export async function startRoutingProxy(provider, { brain = askBrain, sessionId 
                 `${key} ${brainAnswer ? `p=${brainAnswer.confidence.toFixed(2)}` : "no-brain"} ` +
                   `${currentTier} -> ${decision.tier} (${decision.reason})`,
               );
-              writeSessionStatus(sessionId, {
-                tier: decision.tier,
-                confidence: brainAnswer?.confidence ?? null,
-                reason: decision.reason,
-                prompt: turn.promptText,
-                at: Date.now(),
-              });
             }
 
             const modelId = provider.modelIdForTier(decision.tier);
             state.tier = decision.tier;
             state.modelId = modelId;
+
+            // Written after the model is resolved so the status line can name it, and on
+            // every routed request so a status line opened mid-session still has something.
+            if (turn.promptText) {
+              writeSessionStatus(statusKey, {
+                tier: decision.tier,
+                model: modelId,
+                confidence: brainAnswer?.confidence ?? null,
+                reason: decision.reason,
+                at: Date.now(),
+              });
+            }
 
             const applied = provider.applyTier(parsedBody, outgoingUrl, decision.tier, modelId);
             outgoingBody = Buffer.from(JSON.stringify(applied.body));

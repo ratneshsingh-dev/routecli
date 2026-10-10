@@ -4,6 +4,10 @@
 // reaches a tier that cannot accept them.
 
 import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { findOnPath } from "../launcher.js";
 
 export const SENTINEL_MODEL = "router-auto";
@@ -104,17 +108,17 @@ export const claudeProvider = {
     const conversationId = createHash("sha1").update(`${session}|${firstText}`).digest("hex").slice(0, 12);
 
     if (body.model !== SENTINEL_MODEL) {
-      return { isSentinel: false, promptText: isAgentTurn ? "manual" : null, conversationId };
+      return { isSentinel: false, promptText: isAgentTurn ? "manual" : null, conversationId, statusKey: session };
     }
     if (!isAgentTurn) {
-      return { isSentinel: true, promptText: null, conversationId };
+      return { isSentinel: true, promptText: null, conversationId, statusKey: session };
     }
     // Claude Code appends a trailing environment-context message after the real user turn,
     // so the most recent "user" message, not strictly the last message, is the actual turn.
     const lastUser = [...messages].reverse().find((message) => message.role === "user");
     const text = lastUser && textOfMessage(lastUser);
     const cleaned = text?.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, "").trim();
-    return { isSentinel: true, promptText: cleaned || null, conversationId };
+    return { isSentinel: true, promptText: cleaned || null, conversationId, statusKey: session };
   },
 
   modelIdForTier,
@@ -149,6 +153,7 @@ export const claudeProvider = {
   /** Env vars + args to add so Claude Code routes through the proxy and offers the sentinel. */
   buildLaunch({ proxyBaseURL }) {
     return {
+      extraArgs: statusLineArgs(),
       env: {
         ANTHROPIC_BASE_URL: proxyBaseURL,
         ANTHROPIC_MODEL: process.env.ANTHROPIC_MODEL || SENTINEL_MODEL,
@@ -159,7 +164,39 @@ export const claudeProvider = {
           "thinking,adaptive_thinking,interleaved_thinking,effort,max_effort",
         CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT: "1",
       },
-      extraArgs: [],
     };
   },
 };
+
+/**
+ * Claude Code merges `--settings` over its own config, so this adds a status line showing the
+ * routed model. A status line the user configured themselves is left alone: theirs is a
+ * deliberate choice, and silently replacing it would be worse than showing nothing. Set
+ * ROUTECLI_NO_STATUSLINE=1 to opt out entirely.
+ */
+function statusLineArgs() {
+  if (process.env.ROUTECLI_NO_STATUSLINE) return [];
+  for (const dir of [join(process.cwd(), ".claude"), join(homedir(), ".claude")]) {
+    try {
+      if (JSON.parse(readFileSync(join(dir, "settings.json"), "utf8")).statusLine) return [];
+    } catch {
+      // No settings file, or unreadable; nothing of the user's to preserve.
+    }
+  }
+  const script = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "bin", "routecli-statusline.js");
+  const file = join(tmpdir(), "routecli", "settings.json");
+  try {
+    mkdirSync(dirname(file), { recursive: true });
+    // Written as a file rather than inline JSON: on Windows the arguments pass through a
+    // shell, which does not preserve a JSON string containing its own quotes.
+    writeFileSync(
+      file,
+      JSON.stringify({
+        statusLine: { type: "command", command: `"${process.execPath}" "${script}"` },
+      }),
+    );
+  } catch {
+    return [];
+  }
+  return ["--settings", file];
+}
