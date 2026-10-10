@@ -28,7 +28,10 @@ export function findExplicitTier(promptText) {
 }
 
 const DEFAULT_THRESHOLDS = {
-  minConfidence: 0.3,
+  // Below this the answer is treated as "unsure" rather than as a decision. Set well above
+  // chance: an unsure classifier picking `fast` was the main way hard questions ended up on
+  // the cheapest model, and getting a weak answer costs far more than a few cents saved.
+  minConfidence: 0.55,
   uncertainCeiling: "balanced",
   maxContextTokensForDowngrade: 20000,
 };

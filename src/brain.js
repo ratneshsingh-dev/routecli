@@ -17,11 +17,13 @@ function getClient() {
   return client;
 }
 
+// Graded on how much reasoning the answer demands, not on whether it involves code: these
+// CLIs get asked to explain and design at least as often as they get asked to edit files.
 const TIER_GUIDANCE = {
-  fast: "Trivial, mechanical, or purely factual requests: typo fixes, renames, one obvious command.",
-  balanced: "Ordinary bounded engineering work: implement a described function, fix an understood bug.",
-  strong: "Hard reasoning, ambiguity, or wide blast radius: unknown-cause debugging, cross-module design, security.",
-  deep: "Very large or long-running work: whole-repo migrations, unusually large context.",
+  fast: "A single recalled fact or one mechanical edit. The answer is looked up, not worked out: a capital city, a typo fix, a rename, one obvious command.",
+  balanced: "Routine work with a clear shape: implement a described function, fix an understood bug, or explain a well-defined topic at ordinary depth.",
+  strong: "The answer has to be reasoned out rather than recalled: system and architecture design, unknown-cause debugging, security, concurrency, tradeoff analysis, or explaining a subtle topic where precision and caveats matter.",
+  deep: "Very large or long-running work: whole-repo migrations, or analysis spanning many interacting parts at once.",
 };
 
 /**
@@ -46,8 +48,9 @@ export async function askBrain({ prompt, currentTier, contextTokens }) {
         },
         questions: {
           tier: choice(
-            "Pick the cheapest tier that can fully complete this coding request in one pass, " +
-              "without needing to retry on a stronger tier afterwards.",
+            "Pick the cheapest tier that can fully answer this request in one pass, without " +
+              "needing to retry on a stronger tier afterwards. Judge the reasoning the answer " +
+              "demands, not whether the request mentions code and not how long the reply will be.",
             TIER_GUIDANCE,
           ),
         },
