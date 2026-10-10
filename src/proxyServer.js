@@ -73,7 +73,12 @@ export async function startRoutingProxy(provider, { brain = askBrain, sessionId 
             const key = turn.conversationId;
             const state = conversationState(key);
             const availableTiers = provider.availableTiers();
-            const currentTier = state.tier ?? availableTiers[availableTiers.length - 1];
+            // Start on the middle tier rather than the top one. This is the baseline an
+            // uncertain answer falls back to, and anchoring that at the most expensive model
+            // meant every unsure first turn paid top rates.
+            const currentTier = state.tier ?? (availableTiers.includes("balanced")
+              ? "balanced"
+              : availableTiers[availableTiers.length - 1]);
             const currentModelId = state.modelId ?? provider.modelIdForTier(currentTier);
 
             let decision = { tier: currentTier, reason: "no-new-turn" };

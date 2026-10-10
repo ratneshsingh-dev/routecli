@@ -19,10 +19,12 @@ function getClient() {
 
 // Graded on how much reasoning the answer demands, not on whether it involves code: these
 // CLIs get asked to explain and design at least as often as they get asked to edit files.
+// `balanced` is deliberately the broad default -- most real questions belong there, and
+// `strong` is reserved for the genuinely hard minority, since it costs far more to run.
 const TIER_GUIDANCE = {
   fast: "A single recalled fact or one mechanical edit. The answer is looked up, not worked out: a capital city, a typo fix, a rename, one obvious command.",
-  balanced: "Routine work with a clear shape: implement a described function, fix an understood bug, or explain a well-defined topic at ordinary depth.",
-  strong: "The answer has to be reasoned out rather than recalled: system and architecture design, unknown-cause debugging, security, concurrency, tradeoff analysis, or explaining a subtle topic where precision and caveats matter.",
+  balanced: "The common case, and the default when unsure between this and a stronger tier. Substantial but well-trodden work: explain a topic in depth, outline a system's architecture, implement a described function, fix an understood bug, compare known options. Demanding to write, but the shape of the answer is known.",
+  strong: "Genuinely hard reasoning only, not merely long or technical answers. Reserve for: deriving a non-obvious result, debugging a cause nobody has identified, subtle correctness questions (concurrency, security, consistency), weighing tradeoffs with no established answer, or a question where a competent generalist would likely get it wrong.",
   deep: "Very large or long-running work: whole-repo migrations, or analysis spanning many interacting parts at once.",
 };
 
