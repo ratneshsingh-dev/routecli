@@ -108,7 +108,9 @@ export const codexProvider = {
         "--config",
         `model_provider="${PROVIDER_NAME}"`,
         "--config",
-        `model_providers.${PROVIDER_NAME}.name="Model Router"`,
+        // No spaces in the value: a quoted space here survives a POSIX shell but gets
+        // mangled by cmd.exe's nested-quote handling when launching a .cmd shim.
+        `model_providers.${PROVIDER_NAME}.name="${PROVIDER_NAME}"`,
         "--config",
         `model_providers.${PROVIDER_NAME}.base_url="${proxyBaseURL}"`,
         "--config",

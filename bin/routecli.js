@@ -6,7 +6,7 @@ import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { startRoutingProxy } from "../src/proxyServer.js";
-import { loadConfigFile, hasRoutingKey } from "../src/launcher.js";
+import { loadConfigFile, hasRoutingKey, quoteForShell } from "../src/launcher.js";
 import { claudeProvider } from "../src/providers/claude.js";
 import { codexProvider } from "../src/providers/codex.js";
 import { geminiProvider } from "../src/providers/gemini.js";
@@ -62,7 +62,12 @@ if (hasRoutingKey()) {
   );
 }
 
-const child = spawn(binary.path, args, { stdio: "inherit", shell: binary.needsShell, env });
+const childArgs = [...binary.prefix, ...args];
+const child = spawn(binary.path, binary.needsShell ? quoteForShell(childArgs) : childArgs, {
+  stdio: "inherit",
+  shell: binary.needsShell,
+  env,
+});
 
 child.on("error", (err) => {
   close();

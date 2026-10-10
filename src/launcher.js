@@ -18,21 +18,38 @@ export function loadConfigFile() {
 
 export function findOnPath(command) {
   const isWindows = process.platform === "win32";
-  const extensions = isWindows ? (process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";") : [""];
+  // PATHEXT omits .ps1, but npm-installed CLIs often ship one, so it is appended explicitly.
+  const extensions = isWindows
+    ? [...(process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";"), ".ps1"]
+    : [""];
+  // Windows has no executable bit, so X_OK there would reject files that run fine.
+  const mode = isWindows ? constants.F_OK : constants.X_OK;
   const dirs = (process.env.PATH ?? "").split(isWindows ? ";" : ":");
   for (const dir of dirs) {
     if (!dir) continue;
     for (const ext of extensions) {
       const candidate = join(dir.replace(/^"|"$/g, ""), `${command}${ext}`);
       try {
-        accessSync(candidate, constants.X_OK);
-        return { path: candidate, needsShell: /\.(cmd|bat)$/i.test(candidate) };
+        accessSync(candidate, mode);
+        if (/\.ps1$/i.test(candidate)) {
+          // Node cannot execute a PowerShell script directly; run it through the host.
+          return { path: "powershell.exe", prefix: ["-NoProfile", "-File", candidate], needsShell: false };
+        }
+        return { path: candidate, prefix: [], needsShell: /\.(cmd|bat)$/i.test(candidate) };
       } catch {
         // Not here; keep looking.
       }
     }
   }
   return null;
+}
+
+/**
+ * Under `shell: true` Node flattens arguments into a single command line, so anything
+ * containing whitespace has to be quoted or the shell splits it into separate arguments.
+ */
+export function quoteForShell(args) {
+  return args.map((arg) => (/\s/.test(arg) && !/^".*"$/.test(arg) ? `"${arg}"` : arg));
 }
 
 export function hasRoutingKey() {
