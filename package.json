@@ -1,6 +1,6 @@
 {
   "name": "@ratnesh04/routecli",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Launches Claude Code, OpenAI Codex, or Gemini CLI and routes each turn to the cheapest model that can handle it",
   "type": "module",
   "bin": {
